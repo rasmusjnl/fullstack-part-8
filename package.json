@@ -1,0 +1,26 @@
+{
+  "name": "fullstack-part-8",
+  "version": "1.0.0",
+  "description": "GraphQL exercises",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rasmusjnl/fullstack-part-8.git"
+  },
+  "author": "Rasmus Lempinen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rasmusjnl/fullstack-part-8/issues"
+  },
+  "homepage": "https://github.com/rasmusjnl/fullstack-part-8#readme",
+  "dependencies": {
+    "apollo-server": "^2.9.13",
+    "graphql": "^14.5.8",
+    "nodemon": "^2.0.2",
+    "uuid": "^3.3.3"
+  }
+}
