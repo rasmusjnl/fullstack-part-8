@@ -151,6 +151,9 @@ const resolvers = {
       let authorToUpdate = authors.find(author => author.name === args.name);
       if (authorToUpdate) {
         authorToUpdate = { ...authorToUpdate, born: args.setBornTo };
+        authors = authors.map(author =>
+          author.name === args.name ? authorToUpdate : author
+        );
         return authorToUpdate;
       }
       return null;
