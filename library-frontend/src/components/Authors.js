@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 
 const Authors = ({ result, show }) => {
   if (!show) {
@@ -19,7 +19,7 @@ const Authors = ({ result, show }) => {
             <th>books</th>
           </tr>
           {result.data.allAuthors.map(a => (
-            <tr key={a.name}>
+            <tr key={a.id}>
               <td>{a.name}</td>
               <td>{a.born}</td>
               <td>{a.bookCount}</td>

@@ -11,7 +11,7 @@ const ALL_AUTHORS = gql`
     allAuthors {
       name
       born
-      bookCount
+      id
     }
   }
 `;
@@ -19,9 +19,12 @@ const ALL_AUTHORS = gql`
 const ALL_BOOKS = gql`
   {
     allBooks {
+      id
       title
       published
-      author
+      author {
+        name
+      }
     }
   }
 `;
@@ -40,7 +43,6 @@ const CREATE_BOOK = gql`
       genres: $genres
     ) {
       title
-      author
       published
       genres
     }
@@ -73,7 +75,7 @@ const App = () => {
 
   const [addBook] = useMutation(CREATE_BOOK, {
     onError: handleError,
-    refetchQueries: [{ query: ALL_BOOKS }]
+    refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }]
   });
 
   const [editAuthor] = useMutation(EDIT_AUTHOR, {

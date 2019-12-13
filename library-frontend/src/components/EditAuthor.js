@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 const EditAuthor = ({ show, authors, editAuthor }) => {
-  const [name, setName] = useState(null);
+  const [name, setName] = useState("");
   const [born, setBorn] = useState("");
 
   if (!show) {
@@ -10,10 +10,9 @@ const EditAuthor = ({ show, authors, editAuthor }) => {
 
   const submit = async e => {
     e.preventDefault();
-    const updatedAuthor = await editAuthor({
+    await editAuthor({
       variables: { name, setBornTo: parseInt(born, 10) }
     });
-    console.log(updatedAuthor);
     setName("");
     setBorn("");
   };
@@ -28,9 +27,9 @@ const EditAuthor = ({ show, authors, editAuthor }) => {
       <form onSubmit={submit}>
         {!authors.loading && (
           <select value={name} onChange={handleChange}>
-            <option value={null} />
+            <option value="" />
             {authors.data.allAuthors.map(author => (
-              <option value={author.name}>{author.name}</option>
+              <option key={author.id} value={author.name}>{author.name}</option>
             ))}
           </select>
         )}
@@ -42,7 +41,9 @@ const EditAuthor = ({ show, authors, editAuthor }) => {
             onChange={({ target }) => setBorn(target.value)}
           />
         </div>
-        <button type="submit">update author</button>
+        <button disabled={name === ""} type="submit">
+          update author
+        </button>
       </form>
     </>
   );
