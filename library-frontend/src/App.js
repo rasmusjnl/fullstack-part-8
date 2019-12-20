@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { gql } from "apollo-boost";
-import { useQuery, useMutation } from "@apollo/react-hooks";
+import { useQuery, useMutation, useApolloClient } from "@apollo/react-hooks";
 import Authors from "./components/Authors";
 import Books from "./components/Books";
 import NewBook from "./components/NewBook";
 import EditAuthor from "./components/EditAuthor";
+import LoginForm from "./components/LoginForm";
+import Favorites from "./components/Favorites";
 
 const ALL_AUTHORS = gql`
   {
@@ -17,14 +19,24 @@ const ALL_AUTHORS = gql`
 `;
 
 const ALL_BOOKS = gql`
-  {
-    allBooks {
+  query allBooks($genre: String, $author: String) {
+    allBooks(genre: $genre, author: $author) {
       id
       title
       published
       author {
         name
       }
+      genres
+    }
+  }
+`;
+
+const ACTIVE_USER = gql`
+  {
+    me {
+      username
+      favoriteGenre
     }
   }
 `;
@@ -58,9 +70,41 @@ const EDIT_AUTHOR = gql`
   }
 `;
 
+const LOGIN = gql`
+  mutation login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
+      value
+    }
+  }
+`;
+
 const App = () => {
+  const client = useApolloClient();
+  const [activeUser, setActiveUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [page, setPage] = useState("authors");
   const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    if (token) {
+      getActiveUser();
+    }
+    // eslint-disable-next-line
+  }, [token]);
+
+  const getActiveUser = async () => {
+    const { data } = await client.query({
+      query: ACTIVE_USER
+    });
+    setActiveUser(data.me);
+  };
+
+  const logout = () => {
+    setToken(null);
+    localStorage.clear();
+    client.resetStore();
+    setPage("authors");
+  };
 
   const handleError = error => {
     console.log(error);
@@ -82,21 +126,48 @@ const App = () => {
     refetchQueries: [{ query: ALL_AUTHORS }]
   });
 
+  const [login] = useMutation(LOGIN, {
+    onError: handleError
+  });
+
   return (
     <div>
       {errorMsg && <div style={{ color: "red" }}>{errorMsg}</div>}
       <div>
         <button onClick={() => setPage("authors")}>authors</button>
         <button onClick={() => setPage("books")}>books</button>
-        <button onClick={() => setPage("add")}>add book</button>
+        {token && (
+          <button onClick={() => setPage("favorites")}>favorites</button>
+        )}
+        {token && <button onClick={() => setPage("add")}>add book</button>}
+        <button onClick={token ? logout : () => setPage("login")}>
+          {token ? "logout" : "login"}
+        </button>
       </div>
 
-      <Authors show={page === "authors"} result={authors} />
-      <EditAuthor
-        show={page === "authors"}
-        authors={authors}
-        editAuthor={editAuthor}
+      <LoginForm
+        show={page === "login"}
+        login={login}
+        setToken={token => setToken(token)}
+        setPage={setPage}
       />
+
+      <Authors show={page === "authors"} result={authors} />
+      {token && (
+        <EditAuthor
+          show={page === "authors"}
+          authors={authors}
+          editAuthor={editAuthor}
+        />
+      )}
+
+      {activeUser && (
+        <Favorites
+          show={page === "favorites"}
+          activeUser={activeUser}
+          booksQuery={ALL_BOOKS}
+        />
+      )}
 
       <Books show={page === "books"} result={books} />
 
