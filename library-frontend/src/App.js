@@ -42,18 +42,8 @@ const ACTIVE_USER = gql`
 `;
 
 const CREATE_BOOK = gql`
-  mutation createBook(
-    $title: String!
-    $author: String!
-    $published: Int!
-    $genres: [String]!
-  ) {
-    addBook(
-      title: $title
-      author: $author
-      published: $published
-      genres: $genres
-    ) {
+  mutation createBook($title: String!, $author: String!, $published: Int!, $genres: [String]!) {
+    addBook(title: $title, author: $author, published: $published, genres: $genres) {
       title
       published
       genres
@@ -116,10 +106,18 @@ const App = () => {
 
   const authors = useQuery(ALL_AUTHORS);
   const books = useQuery(ALL_BOOKS);
+  const favoriteBooks = useQuery(
+    ALL_BOOKS,
+    activeUser && { variables: { genre: activeUser.favoriteGenre } }
+  );
 
   const [addBook] = useMutation(CREATE_BOOK, {
     onError: handleError,
-    refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }]
+    refetchQueries: [
+      { query: ALL_BOOKS },
+      { query: ALL_AUTHORS },
+      { query: ALL_BOOKS, variables: activeUser && { genre: activeUser.favoriteGenre } }
+    ]
   });
 
   const [editAuthor] = useMutation(EDIT_AUTHOR, {
@@ -136,9 +134,7 @@ const App = () => {
       <div>
         <button onClick={() => setPage("authors")}>authors</button>
         <button onClick={() => setPage("books")}>books</button>
-        {token && (
-          <button onClick={() => setPage("favorites")}>favorites</button>
-        )}
+        {token && <button onClick={() => setPage("favorites")}>favorites</button>}
         {token && <button onClick={() => setPage("add")}>add book</button>}
         <button onClick={token ? logout : () => setPage("login")}>
           {token ? "logout" : "login"}
@@ -153,23 +149,17 @@ const App = () => {
       />
 
       <Authors show={page === "authors"} result={authors} />
-      {token && (
-        <EditAuthor
-          show={page === "authors"}
-          authors={authors}
-          editAuthor={editAuthor}
-        />
-      )}
+      {token && <EditAuthor show={page === "authors"} authors={authors} editAuthor={editAuthor} />}
 
       {activeUser && (
         <Favorites
           show={page === "favorites"}
           activeUser={activeUser}
-          booksQuery={ALL_BOOKS}
+          favoriteBooks={favoriteBooks}
         />
       )}
 
-      <Books show={page === "books"} result={books} />
+      <Books show={page === "books"} initialBooks={books} filterBooks={ALL_BOOKS} />
 
       <NewBook show={page === "add"} addBook={addBook} />
     </div>

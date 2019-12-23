@@ -1,25 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { useApolloClient } from "@apollo/react-hooks";
+import React from "react";
 
-const Favorites = ({ show, activeUser, booksQuery }) => {
-  const client = useApolloClient();
-  const [booksToShow, setBooksToShow] = useState([]);
-
-  useEffect(() => {
-    filterBooks(activeUser.favoriteGenre);
-    // eslint-disable-next-line
-  }, []);
-
-  const filterBooks = async filterGenre => {
-    const { data } = await client.query({
-      query: booksQuery,
-      variables: { genre: filterGenre }
-    });
-    setBooksToShow(data.allBooks);
-  };
-
+const Favorites = ({ show, activeUser, favoriteBooks }) => {
   if (!show) {
     return null;
+  }
+
+  if (favoriteBooks.loading) {
+    return <div>loading...</div>;
   }
 
   return (
@@ -35,14 +22,13 @@ const Favorites = ({ show, activeUser, booksQuery }) => {
             <th>author</th>
             <th>published</th>
           </tr>
-          {booksToShow &&
-            booksToShow.map(a => (
-              <tr key={a.title}>
-                <td>{a.title}</td>
-                <td>{a.author.name}</td>
-                <td>{a.published}</td>
-              </tr>
-            ))}
+          {favoriteBooks.data.allBooks.map(a => (
+            <tr key={a.title}>
+              <td>{a.title}</td>
+              <td>{a.author.name}</td>
+              <td>{a.published}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

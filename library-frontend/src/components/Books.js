@@ -1,41 +1,35 @@
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@apollo/react-hooks";
 
-const Books = ({ show, result }) => {
-  const [booksToShow, setBooksToShow] = useState([]);
-  const [filter, setFilter] = useState("");
+const Books = ({ show, initialBooks, filterBooks }) => {
+  const [filter, setFilter] = useState(null);
   const [uniqueGenres, setUniqueGenres] = useState([]);
 
+  const { loading, data, refetch } = useQuery(filterBooks, {
+    variables: filter && { genre: filter }
+  });
+
   useEffect(() => {
-    if (!result.loading) {
-      setBooksToShow(result.data.allBooks);
+    if (!initialBooks.loading) {
       let genres = [];
-      result.data.allBooks.map(book => {
+      initialBooks.data.allBooks.map(book => {
         genres = genres.concat(book.genres);
         return genres;
       });
       setUniqueGenres([...new Set(genres)]);
     }
-    // eslint-disable-next-line
-  }, [result.loading]);
+  }, [initialBooks]);
+
+  useEffect(() => {
+    refetch();
+  }, [filter, initialBooks, refetch]);
 
   if (!show) {
     return null;
   }
-  if (result.loading) {
+  if (loading) {
     return <div>Loading...</div>;
   }
-
-  const handleFilter = genre => {
-    if (genre) {
-      setBooksToShow(
-        result.data.allBooks.filter(book => book.genres.includes(genre))
-      );
-      setFilter(genre);
-    } else {
-      setBooksToShow(result.data.allBooks);
-      setFilter("");
-    }
-  };
 
   return (
     <div>
@@ -48,7 +42,7 @@ const Books = ({ show, result }) => {
             <th>author</th>
             <th>published</th>
           </tr>
-          {booksToShow.map(a => (
+          {data.allBooks.map(a => (
             <tr key={a.title}>
               <td>{a.title}</td>
               <td>{a.author.name}</td>
@@ -59,12 +53,12 @@ const Books = ({ show, result }) => {
       </table>
       {uniqueGenres.map(genre => {
         return (
-          <button key={genre} onClick={() => handleFilter(genre)}>
+          <button key={genre} onClick={() => setFilter(genre)}>
             {genre}
           </button>
         );
       })}
-      <button onClick={() => handleFilter("")}>all genres</button>
+      <button onClick={() => setFilter(null)}>All genres</button>
     </div>
   );
 };
