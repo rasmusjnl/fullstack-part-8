@@ -1,4 +1,4 @@
-const { ApolloServer, gql, UserInputError } = require("apollo-server");
+const { ApolloServer, gql, UserInputError, PubSub } = require("apollo-server");
 const mongoose = require("mongoose");
 const Book = require("./models/book");
 const Author = require("./models/author");
@@ -9,6 +9,7 @@ mongoose.set("useFindAndModify", false);
 mongoose.set("useUnifiedTopology", true);
 mongoose.set("useCreateIndex", true);
 
+const pubsub = new PubSub();
 const JWT_SECRET = "asd";
 const MONGODB_URI =
   "mongodb+srv://fullstack666:password666@cluster0-tsmcv.mongodb.net/library?retryWrites=true&w=majority";
@@ -44,7 +45,7 @@ const typeDefs = gql`
   type Author {
     name: String!
     born: Int
-    bookCount: Int!
+    bookCount: Int
     id: ID!
   }
 
@@ -69,6 +70,10 @@ const typeDefs = gql`
     ): Book
 
     editAuthor(name: String!, setBornTo: Int!): Author
+  }
+
+  type Subscription {
+    bookAdded: Book!
   }
 `;
 
@@ -140,6 +145,7 @@ const resolvers = {
             invalidArgs: args
           });
         }
+        pubsub.publish("BOOK_ADDED", { bookAdded: newBook });
         return newBook;
       } else {
         const newAuthor = new Author({ name: args.author });
@@ -152,6 +158,7 @@ const resolvers = {
             invalidArgs: args
           });
         }
+        pubsub.publish("BOOK_ADDED", { bookAdded: newBook });
         return newBook;
       }
     },
@@ -169,12 +176,18 @@ const resolvers = {
     }
   },
 
-  Author: {
-    bookCount: async root => {
-      const found = await Book.find({ author: { $in: [root.id] } });
-      return found.length;
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator(["BOOK_ADDED"])
     }
   }
+
+  // Author: {
+  //   bookCount: async root => {
+  //     const found = await Book.find({ author: { $in: [root.id] } });
+  //     return found.length;
+  //   }
+  // }
 };
 
 const server = new ApolloServer({
@@ -190,6 +203,7 @@ const server = new ApolloServer({
   }
 });
 
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
   console.log(`Server ready at ${url}`);
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`);
 });

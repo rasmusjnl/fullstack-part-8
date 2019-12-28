@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { gql } from "apollo-boost";
-import { useQuery, useMutation, useApolloClient } from "@apollo/react-hooks";
+import {
+  useQuery,
+  useMutation,
+  useApolloClient,
+  useSubscription
+} from "@apollo/react-hooks";
 import Authors from "./components/Authors";
 import Books from "./components/Books";
 import NewBook from "./components/NewBook";
@@ -42,8 +47,18 @@ const ACTIVE_USER = gql`
 `;
 
 const CREATE_BOOK = gql`
-  mutation createBook($title: String!, $author: String!, $published: Int!, $genres: [String]!) {
-    addBook(title: $title, author: $author, published: $published, genres: $genres) {
+  mutation createBook(
+    $title: String!
+    $author: String!
+    $published: Int!
+    $genres: [String]!
+  ) {
+    addBook(
+      title: $title
+      author: $author
+      published: $published
+      genres: $genres
+    ) {
       title
       published
       genres
@@ -68,12 +83,27 @@ const LOGIN = gql`
   }
 `;
 
+const BOOK_ADDED = gql`
+  subscription {
+    bookAdded {
+      title
+      published
+    }
+  }
+`;
+
 const App = () => {
   const client = useApolloClient();
   const [activeUser, setActiveUser] = useState(null);
   const [token, setToken] = useState(null);
   const [page, setPage] = useState("authors");
   const [errorMsg, setErrorMsg] = useState(null);
+
+  useSubscription(BOOK_ADDED, {
+    onSubscriptionData: ({ subscriptionData }) => {
+      window.alert(`New book "${subscriptionData.data.bookAdded.title}" added`);
+    }
+  });
 
   useEffect(() => {
     if (token) {
@@ -116,7 +146,10 @@ const App = () => {
     refetchQueries: [
       { query: ALL_BOOKS },
       { query: ALL_AUTHORS },
-      { query: ALL_BOOKS, variables: activeUser && { genre: activeUser.favoriteGenre } }
+      {
+        query: ALL_BOOKS,
+        variables: activeUser && { genre: activeUser.favoriteGenre }
+      }
     ]
   });
 
@@ -134,7 +167,9 @@ const App = () => {
       <div>
         <button onClick={() => setPage("authors")}>authors</button>
         <button onClick={() => setPage("books")}>books</button>
-        {token && <button onClick={() => setPage("favorites")}>favorites</button>}
+        {token && (
+          <button onClick={() => setPage("favorites")}>favorites</button>
+        )}
         {token && <button onClick={() => setPage("add")}>add book</button>}
         <button onClick={token ? logout : () => setPage("login")}>
           {token ? "logout" : "login"}
@@ -149,7 +184,13 @@ const App = () => {
       />
 
       <Authors show={page === "authors"} result={authors} />
-      {token && <EditAuthor show={page === "authors"} authors={authors} editAuthor={editAuthor} />}
+      {token && (
+        <EditAuthor
+          show={page === "authors"}
+          authors={authors}
+          editAuthor={editAuthor}
+        />
+      )}
 
       {activeUser && (
         <Favorites
@@ -159,7 +200,11 @@ const App = () => {
         />
       )}
 
-      <Books show={page === "books"} initialBooks={books} filterBooks={ALL_BOOKS} />
+      <Books
+        show={page === "books"}
+        initialBooks={books}
+        filterBooks={ALL_BOOKS}
+      />
 
       <NewBook show={page === "add"} addBook={addBook} />
     </div>
