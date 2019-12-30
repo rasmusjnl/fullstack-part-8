@@ -4,6 +4,7 @@ const Book = require("./models/book");
 const Author = require("./models/author");
 const User = require("./models/user");
 const jwt = require("jsonwebtoken");
+const DataLoader = require("dataloader");
 
 mongoose.set("useFindAndModify", false);
 mongoose.set("useUnifiedTopology", true);
@@ -22,6 +23,11 @@ mongoose
   .catch(err => {
     console.log("Error connecting to MongoDB");
   });
+
+const batchAuthors = async keys => {
+  const books = await Book.find({});
+  return keys.map(key => books.filter(book => book.author.toString() === key).length);
+};
 
 const typeDefs = gql`
   type User {
@@ -62,12 +68,7 @@ const typeDefs = gql`
 
     login(username: String!, password: String!): Token
 
-    addBook(
-      title: String!
-      author: String!
-      published: Int!
-      genres: [String]!
-    ): Book
+    addBook(title: String!, author: String!, published: Int!, genres: [String]!): Book
 
     editAuthor(name: String!, setBornTo: Int!): Author
   }
@@ -87,8 +88,7 @@ const resolvers = {
     allBooks: async (root, args) => {
       if (Object.keys(args).length === 2) {
         return books.filter(
-          book =>
-            book.author === args.author && book.genres.includes(args.genre)
+          book => book.author === args.author && book.genres.includes(args.genre)
         );
       } else if (args.author) {
         return books.filter(book => book.author === args.author);
@@ -103,6 +103,7 @@ const resolvers = {
       }
     },
     allAuthors: async () => {
+      console.log("Author query");
       return await Author.find({});
     }
   },
@@ -137,7 +138,7 @@ const resolvers = {
       }
       const foundAuthor = await Author.findOne({ name: args.author });
       if (foundAuthor) {
-        const newBook = new Book({ ...args, author: { ...foundAuthor } });
+        const newBook = new Book({ ...args, author: foundAuthor });
         try {
           await newBook.save();
         } catch (error) {
@@ -167,11 +168,9 @@ const resolvers = {
         throw new UserInputError("Not logged in!");
       }
       const author = { name: args.name, born: args.setBornTo };
-      const updatedAuthor = await Author.findOneAndUpdate(
-        { name: args.name },
-        author,
-        { new: true }
-      );
+      const updatedAuthor = await Author.findOneAndUpdate({ name: args.name }, author, {
+        new: true
+      });
       return updatedAuthor;
     }
   },
@@ -180,14 +179,21 @@ const resolvers = {
     bookAdded: {
       subscribe: () => pubsub.asyncIterator(["BOOK_ADDED"])
     }
-  }
+  },
 
-  // Author: {
-  //   bookCount: async root => {
-  //     const found = await Book.find({ author: { $in: [root.id] } });
-  //     return found.length;
-  //   }
-  // }
+  Author: {
+    bookCount: async ({ id }, _args, { loaders }) => {
+      return await loaders.authorLoader.load(id);
+    }
+  },
+
+  Book: {
+    author: root => {
+      return {
+        name: root.author.name
+      };
+    }
+  }
 };
 
 const server = new ApolloServer({
@@ -198,8 +204,9 @@ const server = new ApolloServer({
     if (auth && auth.toLowerCase().startsWith("bearer")) {
       const decodedToken = jwt.verify(auth.substring(7), JWT_SECRET);
       const currentUser = await User.findById(decodedToken.id);
-      return { currentUser };
+      return { currentUser, loaders: { authorLoader: new DataLoader(keys => batchAuthors(keys)) } };
     }
+    return { loaders: { authorLoader: new DataLoader(keys => batchAuthors(keys)) } };
   }
 });
 

@@ -19,6 +19,7 @@
   "homepage": "https://github.com/rasmusjnl/fullstack-part-8#readme",
   "dependencies": {
     "apollo-server": "^2.9.13",
+    "dataloader": "^2.0.0",
     "graphql": "^14.5.8",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.8.0",

@@ -61,6 +61,9 @@ const CREATE_BOOK = gql`
     ) {
       title
       published
+      author {
+        name
+      }
       genres
     }
   }
@@ -88,6 +91,10 @@ const BOOK_ADDED = gql`
     bookAdded {
       title
       published
+      author {
+        name
+      }
+      genres
     }
   }
 `;
@@ -101,6 +108,7 @@ const App = () => {
 
   useSubscription(BOOK_ADDED, {
     onSubscriptionData: ({ subscriptionData }) => {
+      console.log(subscriptionData)
       window.alert(`New book "${subscriptionData.data.bookAdded.title}" added`);
     }
   });
